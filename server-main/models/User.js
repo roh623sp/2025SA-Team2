@@ -40,6 +40,59 @@ const userSchema = new mongoose.Schema({
   createdAt: {
     type: Date,
     default: Date.now
+  },
+  resetPasswordToken: String,
+  resetPasswordExpires: Date,
+  onboarding: {
+    completed: { type: Boolean, default: false },
+    completedAt: Date,
+    fitnessProfile: {
+      goals: [{
+        type: String,
+        enum: ['weight_loss', 'muscle_gain', 'endurance', 'flexibility', 'general_fitness']
+      }],
+      currentMetrics: {
+        height: Number,  // in cm
+        weight: Number,  // in kg
+        age: Number,
+        gender: {
+          type: String,
+          enum: ['male', 'female', 'other', 'prefer_not_to_say']
+        },
+        activityLevel: {
+          type: String,
+          enum: ['sedentary', 'lightly_active', 'moderately_active', 'very_active', 'extremely_active']
+        }
+      },
+      preferences: {
+        workoutFrequency: {
+          type: Number,  // days per week
+          min: 1,
+          max: 7
+        },
+        preferredWorkoutDuration: {
+          type: Number,  // minutes
+          min: 15,
+          max: 120
+        },
+        workoutLocation: {
+          type: String,
+          enum: ['gym', 'home', 'outdoors', 'hybrid']
+        },
+        equipmentAccess: [{
+          type: String,
+          enum: ['full_gym', 'dumbbells', 'resistance_bands', 'bodyweight_only', 'cardio_machines']
+        }],
+        preferredWorkoutTypes: [{
+          type: String,
+          enum: ['strength_training', 'cardio', 'hiit', 'yoga', 'pilates', 'calisthenics']
+        }],
+        healthConditions: [{
+          type: String,
+          enum: ['none', 'back_pain', 'joint_pain', 'heart_condition', 'diabetes', 'pregnancy', 'other']
+        }]
+      }
+    }
   }
 });
 

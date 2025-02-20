@@ -1,0 +1,392 @@
+{
+	"info": {
+		"_postman_id": "d5dc7bf7-c4ef-49f7-b261-651f0e478a32",
+		"name": "Fitness App",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "32906855"
+	},
+	"item": [
+		{
+			"name": "Register User",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\r\n  \"username\": \"testuser\",\r\n  \"email\": \"test@example.com\",\r\n  \"password\": \"strongpassword\"\r\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "http://localhost:5000/api/auth/register",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "5000",
+					"path": [
+						"api",
+						"auth",
+						"register"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Login User",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\r\n    \"email\": \"test@example.com\",\r\n  \"password\": \"strongpassword\"\r\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "http://localhost:5000/api/auth/login",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "5000",
+					"path": [
+						"api",
+						"auth",
+						"login"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Validate User",
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJfaWQiOiI2N2I3NjU2ZTlhMGYyYTA1NDU4Zjc3YjkiLCJpYXQiOjE3NDAwNzIzMTR9.0xKygrd86l8ZIxcdu22MMfSOmqKyVY6JxWaHsIV3s2E",
+						"type": "text"
+					}
+				],
+				"url": {
+					"raw": "http://localhost:5000/api/auth/validate",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "5000",
+					"path": [
+						"api",
+						"auth",
+						"validate"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Update User Profile",
+			"request": {
+				"method": "PATCH",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJfaWQiOiI2N2I3NjU2ZTlhMGYyYTA1NDU4Zjc3YjkiLCJpYXQiOjE3NDAwNzIzMTR9.0xKygrd86l8ZIxcdu22MMfSOmqKyVY6JxWaHsIV3s2E",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\r\n  \"firstName\": \"John\",\r\n  \"lastName\": \"Doe\",\r\n  \"company\": \"ABC Corp.\",\r\n  \"position\": \"Software Engineer\",\r\n  \"phone\": \"555-1234\"\r\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "http://localhost:5000/api/users/profile",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "5000",
+					"path": [
+						"api",
+						"users",
+						"profile"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Update User Settings",
+			"request": {
+				"auth": {
+					"type": "noauth"
+				},
+				"method": "PATCH",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJfaWQiOiI2N2I3NjU2ZTlhMGYyYTA1NDU4Zjc3YjkiLCJpYXQiOjE3NDAwNzIzMTR9.0xKygrd86l8ZIxcdu22MMfSOmqKyVY6JxWaHsIV3s2E",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\r\n  \"notifications\": \"email\",\r\n  \"theme\": \"light\",\r\n  \"dashboardLayout\": \"grid\"\r\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "http://localhost:5000/api/users/settings",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "5000",
+					"path": [
+						"api",
+						"users",
+						"settings"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Forgot password",
+			"request": {
+				"auth": {
+					"type": "noauth"
+				},
+				"method": "POST",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJfaWQiOiI2N2I3NjU2ZTlhMGYyYTA1NDU4Zjc3YjkiLCJpYXQiOjE3NDAwNzIzMTR9.0xKygrd86l8ZIxcdu22MMfSOmqKyVY6JxWaHsIV3s2E",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\r\n    \"email\" : \"chanmeetsinghsahni@gmail.com\"\r\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "http://localhost:5000/api/auth/forgot-password",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "5000",
+					"path": [
+						"api",
+						"auth",
+						"forgot-password"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Reset Password",
+			"request": {
+				"auth": {
+					"type": "noauth"
+				},
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\r\n  \"password\": \"newPassword123\"\r\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "http://localhost:5000/api/auth/reset-password/c289c2d173ed82bd5ccf8c03efe4c1f6fdfbe2a073491796fda97a466e11525e",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "5000",
+					"path": [
+						"api",
+						"auth",
+						"reset-password",
+						"c289c2d173ed82bd5ccf8c03efe4c1f6fdfbe2a073491796fda97a466e11525e"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Delete User Account",
+			"request": {
+				"auth": {
+					"type": "noauth"
+				},
+				"method": "DELETE",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJfaWQiOiI2N2I3NjU2ZTlhMGYyYTA1NDU4Zjc3YjkiLCJpYXQiOjE3NDAwNzM4NzZ9.hxT0VqN0uNha23dGF88zUXiGmAB4bDtTErCqwu2vrbY",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\r\n  \"password\": \"newPassword123\"\r\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "http://localhost:5000/api/users/account",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "5000",
+					"path": [
+						"api",
+						"users",
+						"account"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Submit onborading details",
+			"request": {
+				"auth": {
+					"type": "noauth"
+				},
+				"method": "POST",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJfaWQiOiI2N2I3NmNhZjNkZDE1ZDk4OGYzNDkwZjIiLCJpYXQiOjE3NDAwNzQxNjN9.4m3wRnoigVU-4LAYBiC_bMg0h0N76g1rIIOlD8NB0tE",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\r\n  \"goals\": [\"weight_loss\", \"muscle_gain\"],\r\n  \"currentMetrics\": {\r\n    \"height\": 175,\r\n    \"weight\": 70,\r\n    \"age\": 28,\r\n    \"gender\": \"male\",\r\n    \"activityLevel\": \"moderately_active\"\r\n  },\r\n  \"preferences\": {\r\n    \"workoutFrequency\": 4,\r\n    \"preferredWorkoutDuration\": 60,\r\n    \"workoutLocation\": \"gym\",\r\n    \"equipmentAccess\": [\"full_gym\", \"dumbbells\"],\r\n    \"preferredWorkoutTypes\": [\"strength_training\", \"hiit\"],\r\n    \"healthConditions\": [\"none\"]\r\n  }\r\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "http://localhost:5000/api/onboarding/submit",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "5000",
+					"path": [
+						"api",
+						"onboarding",
+						"submit"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Fetch onboarding details",
+			"request": {
+				"auth": {
+					"type": "noauth"
+				},
+				"method": "GET",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJfaWQiOiI2N2I3NmNhZjNkZDE1ZDk4OGYzNDkwZjIiLCJpYXQiOjE3NDAwNzQxNjN9.4m3wRnoigVU-4LAYBiC_bMg0h0N76g1rIIOlD8NB0tE",
+						"type": "text"
+					}
+				],
+				"url": {
+					"raw": "http://localhost:5000/api/onboarding/status",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "5000",
+					"path": [
+						"api",
+						"onboarding",
+						"status"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Update onboarding details",
+			"request": {
+				"auth": {
+					"type": "noauth"
+				},
+				"method": "PATCH",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJfaWQiOiI2N2I3NmNhZjNkZDE1ZDk4OGYzNDkwZjIiLCJpYXQiOjE3NDAwNzQxNjN9.4m3wRnoigVU-4LAYBiC_bMg0h0N76g1rIIOlD8NB0tE",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\r\n  \"currentMetrics\": {\r\n    \"weight\": 68\r\n  },\r\n  \"preferences\": {\r\n    \"workoutFrequency\": 5\r\n  }\r\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "http://localhost:5000/api/onboarding/update",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "5000",
+					"path": [
+						"api",
+						"onboarding",
+						"update"
+					]
+				}
+			},
+			"response": []
+		}
+	]
+}

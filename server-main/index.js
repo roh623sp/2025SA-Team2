@@ -2,10 +2,12 @@ const express = require('express');
 const dotenv = require('dotenv');
 const connectDB = require('./config/db');
 const authRoutes = require('./routes/auth');
+const userRoutes = require('./routes/user');
 const bodyParser = require('body-parser');
 const cors = require('cors');
 const bcrypt = require('bcryptjs');
 const mongoose = require('mongoose');
+const onboardingRoutes = require('./routes/onboarding');
 
 dotenv.config();
 
@@ -17,6 +19,8 @@ app.get('/',(req,res) => {
   res.json("Welcome to MarketPulse API!!")
 });
 app.use('/api/auth', authRoutes);
+app.use('/api/users', userRoutes);
+app.use('/api/onboarding', onboardingRoutes);
 
 const DEFAULT_ADMIN = {
   email: process.env.ADMIN_EMAIL || 'admin@example.com',
@@ -78,9 +82,9 @@ const start = async () => {
           }
         }
       },
-      { resource: Campaign, options: { parent: { name: 'Campaign Management' }}},
-      { resource: Client, options: { parent: { name: 'Client Management' }}},
-      { resource: Analytics, options: { parent: { name: 'Analytics Management' }}}
+      // { resource: Campaign, options: { parent: { name: 'Campaign Management' }}},
+      // { resource: Client, options: { parent: { name: 'Client Management' }}},
+      // { resource: Analytics, options: { parent: { name: 'Analytics Management' }}}
     ],
     rootPath: '/admin',
     branding: {

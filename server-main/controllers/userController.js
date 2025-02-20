@@ -42,7 +42,73 @@ const getUserProfile = async (req, res) => {
   res.json(req.user);  // req.user is set by the protect middleware
 };
 
-module.exports = { getUserProfile };
+const updateProfile = async (req, res) => {
+  const updates = Object.keys(req.body);
+  const allowedUpdates = ['firstName', 'lastName', 'company', 'position', 'phone'];
+  const isValidOperation = updates.every(update => allowedUpdates.includes(update));
+  
+  if (!isValidOperation) {
+    return res.status(400).send({ error: 'Invalid updates!' });
+  }
+  
+  try {
+    updates.forEach(update => req.user.profile[update] = req.body[update]);
+    await req.user.save();
+    res.send(req.user);
+  } catch (error) {
+    res.status(400).send(error);
+  }
+};
 
+const updateSettings = async (req, res) => {
+  try {
+    const { notifications, theme, dashboardLayout } = req.body;
+    req.user.settings = { ...req.user.settings, notifications, theme, dashboardLayout };
+    await req.user.save();
+    res.send(req.user.settings);
+  } catch (error) {
+    res.status(400).send(error);
+  }
+};
 
-module.exports = { registerUser, loginUser, getUserProfile };
+const deleteAccount = async (req, res) => {
+  try {
+    // Require password confirmation for security
+    const { password } = req.body;
+    
+    if (!password) {
+      return res.status(400).send({ 
+        error: 'Password is required to delete account' 
+      });
+    }
+
+    // Verify password
+    const isMatch = await req.user.matchPassword(password);
+    if (!isMatch) {
+      return res.status(401).send({ 
+        error: 'Incorrect password' 
+      });
+    }
+
+    // Delete the user
+    await User.findByIdAndDelete(req.user._id);
+
+    res.send({ 
+      message: 'Account successfully deleted' 
+    });
+  } catch (error) {
+    console.error('Delete account error:', error);
+    res.status(500).send({ 
+      error: 'Error deleting account' 
+    });
+  }
+};
+
+module.exports = {
+  registerUser,
+  loginUser,
+  getUserProfile,
+  updateProfile,
+  updateSettings,
+  deleteAccount
+};
