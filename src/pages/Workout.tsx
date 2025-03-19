@@ -12,10 +12,8 @@ interface Exercise {
 
 const client = generateClient<Schema>();
 
-// 🔑 Use your single YouTube API key here
 const YOUTUBE_API_KEY = "AIzaSyAKwgma38x1HQzkgWbLs2XpdW6hii2Mktc";
 
-// 🎥 Hardcoded Backup Videos for Common Exercises
 const backupVideos: Record<string, string> = {
   "Squats": "https://www.youtube.com/embed/aclHkVaku9U",
   "Push Ups": "https://www.youtube.com/embed/IODxDxX7oi4",

@@ -1,66 +1,62 @@
-import React from 'react'
-import { useState } from "react";
+import React, { useState, useEffect } from "react";
 import type { Schema } from "../../amplify/data/resource";
 import { generateClient } from "aws-amplify/data";
 
 const client = generateClient<Schema>();
 
 function Tracker() {
-  const [showWorkoutOptions, setShowWorkoutOptions] = useState(false); // New state for workout options
   const [showChoices, setShowChoices] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [workoutType, setWorkoutType] = useState<"cardio" | "strength" | null>(null);
   const [workoutHistory, setWorkoutHistory] = useState<Array<Schema["Tracker"]["type"]>>([]);
 
+  // Fetch workout history automatically when the component mounts
+  useEffect(() => {
+    fetchWorkoutHistory();
+  }, []);
 
   const handleButtonClick = () => {
-    setShowWorkoutOptions(true); // Show workout options first
+    setShowChoices(true); // Directly show the cardio/strength choices
   };
 
   const deleteWorkout = async (id: string) => {
     try {
-      console.log("Deleting workout with ID:", id); // Debugging
       await client.models.Tracker.delete({ id });
-      console.log("Tracker deleted successfully!");
-      // Refresh the workout history after deletion
-      fetchWorkoutHistory();
+      fetchWorkoutHistory(); // Refresh history after deletion
     } catch (error) {
       console.error("Error deleting workout:", error);
     }
   };
 
-  const handleWorkoutOptionSelection = async (option: "history" | "add") => {
-    if (option === "history") {
-      await fetchWorkoutHistory();
-      setShowChoices(false);
-      setShowForm(false);
-    } else if (option === "add") {
-      setShowChoices(true);
-    }
-    setShowWorkoutOptions(false);
-  };
-  
   const handleChoiceSelection = (type: "cardio" | "strength") => {
     setWorkoutType(type);
     setShowForm(true);
     setShowChoices(false);
   };
 
-  const handleWorkoutSubmit = async (workout: string, calories: string, setsOrDuration: string) => {
+  const handleWorkoutSubmit = async (
+    workout: string,
+    calories: string,
+    sets: string,
+    date: string,
+    weight?: string,
+    reps?: string // Add reps as a separate parameter
+  ) => {
     try {
       const newWorkout = {
         type: workoutType,
         workout: workout,
-        duration: workoutType === "cardio" ? parseInt(setsOrDuration) : undefined,
-        sets: workoutType === "strength" ? parseInt(setsOrDuration) : undefined,
-        reps: workoutType === "strength" ? parseInt(setsOrDuration) : undefined,
+        duration: workoutType === "cardio" ? parseInt(sets) : undefined,
+        sets: workoutType === "strength" ? parseInt(sets) : undefined,
+        reps: workoutType === "strength" ? parseInt(reps || "0") : undefined, // Use reps here
         calories: parseInt(calories),
+        date: date,
+        weight: workoutType === "strength" ? parseFloat(weight || "0") : undefined,
       };
-      console.log("Saving workout:", newWorkout); // Debugging
       await client.models.Tracker.create(newWorkout);
-      console.log("Tracker saved successfully!");
       setShowForm(false);
       setWorkoutType(null);
+      fetchWorkoutHistory(); // Refresh history after adding a workout
     } catch (error) {
       console.error("Error saving workout:", error);
     }
@@ -69,114 +65,109 @@ function Tracker() {
   const fetchWorkoutHistory = async () => {
     try {
       const response = await client.models.Tracker.list({
-        authMode: "userPool", // Ensure the correct auth mode is used
-        
+        authMode: "userPool",
       });
-      console.log("Raw response from backend:", response); // Debugging
       if (response.data) {
-        console.log("Tracker data:", response.data); // Debugging
-        setWorkoutHistory(response.data);
+        // Sort the data by date in descending order (newest first)
+        const sortedData = response.data.sort((a, b) => {
+          const dateA = new Date(a.date).getTime();
+          const dateB = new Date(b.date).getTime();
+          return dateB - dateA; // Sort in descending order
+        });
+        setWorkoutHistory(sortedData);
       } else {
         console.log("No data found in the response.");
       }
     } catch (error) {
-      console.error("Error fetching workout history:", error); // Debugging
+      console.error("Error fetching workout history:", error);
     }
   };
 
   return (
     <main>
+      {/* Buttons Section (Always at the top) */}
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px', marginBottom: '20px' }}>
+        {/* Add Workout Button */}
+        {!showChoices && !showForm && (
+          <button onClick={handleButtonClick}>Add a Workout</button>
+        )}
 
-     
-      {/* Main content */}
-
-      {/* Tracker Tracker */}
-      {!showWorkoutOptions && !showChoices && !showForm && (
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px' }}>
-        <button onClick={handleButtonClick}>Workout Tracker</button>
-        </div>
-      )}
-
-      {/* Workout Options: History or Add Workout */}
-      {showWorkoutOptions && (
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px' }}>
-          
-          <div style={{ display: 'flex', flexDirection: 'row', gap: '10px' }}>
-            <button onClick={() => handleWorkoutOptionSelection("history")}>Workout History</button>
-            <button onClick={() => handleWorkoutOptionSelection("add")}>Add a Workout</button>
-          </div>
-        </div>
-      )}
-
-{/* Workout History */}
-{workoutHistory && workoutHistory.length > 0 ? (
-  <div style={{ marginTop: '20px' }}>
-    <h2>Workout History</h2>
-    <ul>
-      {workoutHistory
-        .filter((workout) => workout !== null) // Filter out null values
-        .map((workout) => (
-          <li key={workout.id}>
-            <strong>Type:</strong> {workout.type || "N/A"} <br />
-            <strong>Workout:</strong> {workout.workout || "N/A"} <br />
-            {workout.type === "cardio" && (
-              <>
-                <strong>Duration:</strong> {workout.duration || "N/A"} minutes <br />
-              </>
-            )}
-            {workout.type === "strength" && (
-              <>
-                <strong>Sets:</strong> {workout.sets || "N/A"} <br />
-                <strong>Reps:</strong> {workout.reps || "N/A"} <br />
-              </>
-            )}
-            <strong>Calories Burned:</strong> {workout.calories || "N/A"} <br />
-            <button onClick={() => deleteWorkout(workout.id)}>Delete</button>
-            <hr />
-          </li>
-        ))}
-    </ul>
-  </div>
-) : (
-  <p></p>
-)}
-
-      {/* Cardio or Strength Choices */}
-      {showChoices && (
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px' }}>
-          
+        {/* Cardio or Strength Choices */}
+        {showChoices && (
           <div style={{ display: 'flex', flexDirection: 'row', gap: '10px' }}>
             <button onClick={() => handleChoiceSelection("cardio")}>Cardio</button>
             <button onClick={() => handleChoiceSelection("strength")}>Strength</button>
           </div>
+        )}
+
+        {/* Cardio Form */}
+        {showForm && workoutType === "cardio" && (
+          <CardioForm onSubmit={handleWorkoutSubmit} />
+        )}
+
+        {/* Strength Form */}
+        {showForm && workoutType === "strength" && (
+          <StrengthForm onSubmit={handleWorkoutSubmit} />
+        )}
+      </div>
+
+      {/* Workout History Section (Below the buttons) */}
+      {workoutHistory.length > 0 && (
+        <div style={{ marginTop: '20px' }}>
+          <h2>Workout History</h2>
+          <ul>
+            {workoutHistory
+              .filter((workout) => workout !== null)
+              .map((workout) => (
+                <li key={workout.id}>
+                  <strong>Date:</strong> {workout.date || "N/A"} <br />
+                  <strong>Type:</strong> {workout.type || "N/A"} <br />
+                  <strong>Workout:</strong> {workout.workout || "N/A"} <br />
+                  {workout.type === "cardio" && (
+                    <>
+                      <strong>Duration:</strong> {workout.duration || "N/A"} minutes <br />
+                    </>
+                  )}
+                  {workout.type === "strength" && (
+                    <>
+                      <strong>Sets:</strong> {workout.sets || "N/A"} <br />
+                      <strong>Reps:</strong> {workout.reps || "N/A"} <br />
+                      <strong>Weight:</strong> {workout.weight || "N/A"} lbs <br />
+                    </>
+                  )}
+                  <strong>Calories Burned:</strong> {workout.calories || "N/A"} <br />
+                  
+                  <button onClick={() => deleteWorkout(workout.id)}>Delete</button>
+                  <hr />
+                </li>
+              ))}
+          </ul>
         </div>
-      )}
-
-      {/* Cardio Form */}
-      {showForm && workoutType === "cardio" && (
-        <CardioForm onSubmit={handleWorkoutSubmit} />
-      )}
-
-      {/* Strength Form */}
-      {showForm && workoutType === "strength" && (
-        <StrengthForm onSubmit={handleWorkoutSubmit} />
       )}
     </main>
   );
 }
 
 interface WorkoutFormProps {
-  onSubmit: (workout: string, calories: string, sets: string) => void;
+  onSubmit: (
+    workout: string,
+    calories: string,
+    setsOrDuration: string,
+    date: string,
+    weight?: string,
+    reps?: string
+  ) => Promise<void>;
 }
 
 const CardioForm: React.FC<WorkoutFormProps> = ({ onSubmit }) => {
   const [workout, setWorkout] = useState('');
   const [duration, setDuration] = useState('');
   const [calories, setCalories] = useState('');
+  const [date, setDate] = useState(''); // Add date state
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onSubmit(workout, calories, duration);
+    onSubmit(workout, calories, duration, date); // Pass date to onSubmit
   };
 
   return (
@@ -213,10 +204,19 @@ const CardioForm: React.FC<WorkoutFormProps> = ({ onSubmit }) => {
             placeholder="e.g., 300"
           />
         </label>
-        <h1></h1>
       </div>
-      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px' }}>  
-      <button type="submit">Submit</button>
+      <div>
+        <label style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '5px', color: 'black', fontSize: '20px', fontWeight: 'bold' }}>
+          Date:
+          <input
+            type="date"
+            value={date}
+            onChange={(e) => setDate(e.target.value)}
+          />
+        </label>
+      </div>
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px' }}>
+        <button type="submit">Submit</button>
       </div>
     </form>
   );
@@ -227,10 +227,12 @@ const StrengthForm: React.FC<WorkoutFormProps> = ({ onSubmit }) => {
   const [sets, setSets] = useState('');
   const [reps, setReps] = useState('');
   const [calories, setCalories] = useState('');
+  const [date, setDate] = useState(''); // Add date state
+  const [weight, setWeight] = useState(''); // Add weight state
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onSubmit(workout, calories, sets);
+    onSubmit(workout, calories, sets, date, weight, reps); // Pass reps as a separate argument
   };
 
   return (
@@ -270,6 +272,17 @@ const StrengthForm: React.FC<WorkoutFormProps> = ({ onSubmit }) => {
       </div>
       <div>
         <label style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '5px', color: 'black', fontSize: '20px', fontWeight: 'bold' }}>
+          Weight (lbs):
+          <input
+            type="number"
+            value={weight}
+            onChange={(e) => setWeight(e.target.value)}
+            placeholder="e.g., 50"
+          />
+        </label>
+      </div>
+      <div>
+        <label style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '5px', color: 'black', fontSize: '20px', fontWeight: 'bold' }}>
           Calories Burned:
           <input
             type="number"
@@ -278,7 +291,16 @@ const StrengthForm: React.FC<WorkoutFormProps> = ({ onSubmit }) => {
             placeholder="e.g., 200"
           />
         </label>
-        <h1></h1>
+      </div>
+      <div>
+        <label style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '5px', color: 'black', fontSize: '20px', fontWeight: 'bold' }}>
+          Date:
+          <input
+            type="date"
+            value={date}
+            onChange={(e) => setDate(e.target.value)}
+          />
+        </label>
       </div>
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px' }}>
         <button type="submit">Submit</button>

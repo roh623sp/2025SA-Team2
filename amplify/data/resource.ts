@@ -29,6 +29,8 @@ const schema = a.schema({
     sets: a.integer(), // Only for strength
     reps: a.integer(), // Only for strength
     calories: a.integer().required(),
+    date: a.date().required(),
+    weight: a.float(),
     })
     .authorization(allow => [allow.owner()]), // Restrict access to the owner
   
