@@ -1,16 +1,30 @@
-import React, { useEffect, useState } from 'react';
-import { getCurrentUser } from '@aws-amplify/auth';
-import { generateClient } from 'aws-amplify/data';
-import type { Schema } from '../../amplify/data/resource';
+import React, { useEffect, useState } from "react";
+import { getCurrentUser } from "@aws-amplify/auth";
+import { generateClient } from "aws-amplify/data";
+import type { Schema } from "../../amplify/data/resource";
 
 interface Exercise {
   id: number;
   name: string;
   description: string;
-  equipment: { name: string }[];
+  videoUrl: string | null;
 }
 
 const client = generateClient<Schema>();
+
+// 🔑 Use your single YouTube API key here
+const YOUTUBE_API_KEY = "AIzaSyAKwgma38x1HQzkgWbLs2XpdW6hii2Mktc";
+
+// 🎥 Hardcoded Backup Videos for Common Exercises
+const backupVideos: Record<string, string> = {
+  "Squats": "https://www.youtube.com/embed/aclHkVaku9U",
+  "Push Ups": "https://www.youtube.com/embed/IODxDxX7oi4",
+  "Pull Ups": "https://www.youtube.com/embed/eGo4IYlbE5g",
+  "Deadlifts": "https://www.youtube.com/embed/r4MzxtBKyNE",
+  "Cycling": "https://www.youtube.com/embed/pmB6R67-_CM",
+  "Jump Rope": "https://www.youtube.com/embed/YFhIPQ_xlJo",
+  "Lunges": "https://www.youtube.com/embed/7m7bP2M9p6o",
+};
 
 function Workout() {
   const [loading, setLoading] = useState(false);
@@ -39,11 +53,12 @@ function Workout() {
         console.log("Loaded Onboarding Data:", userData);
 
         const exercises = await fetchExercisesForUserPreferences(userData);
-        setAllExercises(exercises);
+        const exercisesWithVideos = await fetchYouTubeVideos(exercises);
 
+        setAllExercises(exercisesWithVideos);
       } catch (err) {
         console.error(err);
-        setError("Failed to fetch workout recommendation.");
+        setError("Failed to fetch workout recommendations.");
       } finally {
         setLoading(false);
       }
@@ -54,29 +69,57 @@ function Workout() {
 
   async function fetchExercisesForUserPreferences(userData: Schema["OnboardingData"]["type"]): Promise<Exercise[]> {
     const categories = mapPreferencesToWgerCategories(userData);
-    const equipment = mapEquipmentToWgerIds(userData.equipmentAvailable || 'none');
-
     const categoryParam = categories.join(',');
-    const equipmentParam = equipment.length ? `&equipment=${equipment.join(',')}` : '';  // Only add if needed
 
-    const url = `https://wger.de/api/v2/exercise/?language=2&category=${categoryParam}${equipmentParam}`;
-    console.log(`Fetching from: ${url}`);
+    const url = "https://wger.de/api/v2/exercise/?language=2&category=${categoryParam}";
+    console.log("Fetching from: ${url}");
 
     const response = await fetch(url);
-    if (!response.ok) {
-        throw new Error(`Failed fetching exercises: ${response.statusText}`);
-    }
     const data = await response.json();
     
-    // Filter out non-English exercises
-    const englishOnly = data.results.filter((ex: Exercise) => isMostlyEnglish(ex.description));
+    return data.results.map((exercise: any) => ({
+      id: exercise.id,
+      name: exercise.name,
+      description: exercise.description,
+      videoUrl: null,
+    }));
+  }
 
-    function isMostlyEnglish(text: string): boolean {
-      const englishCharCount = text.replace(/[^a-zA-Z]/g, '').length;
-      return englishCharCount / text.length > 0.5;
-    }
-    return englishOnly;
-    
+  async function fetchYouTubeVideos(exercises: Exercise[]): Promise<Exercise[]> {
+    return Promise.all(
+      exercises.map(async (exercise) => {
+        const cachedVideo = localStorage.getItem("video_${exercise.name}");
+        if (cachedVideo) {
+          console.log("Using cached video for ${exercise.name}");
+          return { ...exercise, videoUrl: JSON.parse(cachedVideo) };
+        }
+
+        let videoUrl = null;
+        const query = encodeURIComponent("${exercise.name} workout tutorial exercise");
+        
+        try {
+          console.log("Fetching YouTube video for: ${exercise.name}");
+          const response = await fetch(
+            "https://www.googleapis.com/youtube/v3/search?part=snippet&q=${query}&key=${YOUTUBE_API_KEY}&maxResults=1&type=video"
+          );
+
+          if (!response.ok) throw new Error("YouTube API request failed: ${response.statusText}");
+
+          const data = await response.json();
+          console.log("YouTube Response for ${exercise.name}:", data);
+
+          const videoId = data.items?.[0]?.id?.videoId;
+          if (videoId) {
+            videoUrl = "https://www.youtube.com/embed/${videoId}";
+            localStorage.setItem(`video_${exercise.name}`, JSON.stringify(videoUrl)); // Save to cache
+          }
+        } catch (error) {
+          console.error("Failed to fetch video for ${exercise.name}, using backup", error);
+        }
+
+        return { ...exercise, videoUrl: videoUrl || backupVideos[exercise.name] || null };
+      })
+    );
   }
 
   function mapPreferencesToWgerCategories(userData: Schema["OnboardingData"]["type"]): number[] {
@@ -91,43 +134,44 @@ function Workout() {
     })();
 
     switch (userData.fitnessType) {
-        case "cardio": return goalCategories.filter(cat => cat === 15);   // Only cardio
-        case "strength": return goalCategories.filter(cat => cat !== 15);  // No cardio
-        case "flexibility": return [15];   // Flexibility = stretching (wger reuses category 15 here too)
-        case "mixed": return goalCategories;  // Full mix
-        default: return goalCategories;  // Fallback
+        case "cardio": return goalCategories.filter(cat => cat === 15);
+        case "strength": return goalCategories.filter(cat => cat !== 15);
+        case "flexibility": return [15];
+        case "mixed": return goalCategories;
+        default: return goalCategories;
     }
-}
-
-
-  function mapEquipmentToWgerIds(equipmentAvailable: string): number[] {
-    const equipmentMap: Record<string, number[]> = {
-      none: [0],  // Equipment ID 0 usually means bodyweight only
-      basic: [3, 7, 8],  // Dumbbell, Resistance Band, Kettlebell
-      full: []  // No filter applied for full gym access
-    };
-
-    return equipmentMap[equipmentAvailable] || [];
   }
 
   if (loading) return <div>Loading your recommended workout...</div>;
-
-  if (error) return <div style={{ color: 'red' }}>{error}</div>;
+  if (error) return <div style={{ color: "red" }}>{error}</div>;
 
   if (!allExercises.length) {
     return <div>No recommended exercises found. Try updating your quiz info!</div>;
   }
 
   return (
-    <div style={{ padding: '1rem' }}>
+    <div style={{ padding: "1rem" }}>
       <h2>Your Recommended Workout</h2>
       <p>Based on your quiz answers, here are some exercises you might try:</p>
 
       <ul>
         {allExercises.slice(0, visibleCount).map((ex) => (
-          <li key={ex.id}>
+          <li key={ex.id} style={{ marginBottom: "20px" }}>
             <strong>{ex.name}</strong>
-            <div dangerouslySetInnerHTML={{ __html: ex.description }} />
+            <p dangerouslySetInnerHTML={{ __html: ex.description }} />
+            
+            {/* 🎥 Embed YouTube video or backup */}
+            {ex.videoUrl ? (
+              <iframe
+                width="360"
+                height="200"
+                src={ex.videoUrl}
+                title={ex.name}
+                allowFullScreen
+              ></iframe>
+            ) : (
+              <p>No tutorial found</p>
+            )}
           </li>
         ))}
       </ul>
@@ -136,13 +180,13 @@ function Workout() {
         <button
           onClick={() => setVisibleCount(prev => prev + 5)}
           style={{
-            marginTop: '1rem',
-            padding: '0.6rem 1.2rem',
-            backgroundColor: '#194121',
-            color: 'white',
-            borderRadius: '5px',
-            cursor: 'pointer',
-            border: 'none',
+            marginTop: "1rem",
+            padding: "0.6rem 1.2rem",
+            backgroundColor: "#194121",
+            color: "white",
+            borderRadius: "5px",
+            cursor: "pointer",
+            border: "none",
           }}
         >
           Show More
