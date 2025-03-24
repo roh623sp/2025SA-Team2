@@ -1,10 +1,11 @@
-import React, { useEffect, useState } from "react";
-import { getCurrentUser } from "@aws-amplify/auth";
-import { generateClient } from "aws-amplify/data";
-import type { Schema } from "../../amplify/data/resource";
+
+import React, { useEffect, useState } from 'react';
+import { getCurrentUser } from '@aws-amplify/auth';
+import { generateClient } from 'aws-amplify/data';
+import type { Schema } from '../../amplify/data/resource';
 
 interface Exercise {
-  id: number;
+  id: string;
   name: string;
   description: string;
   videoUrl: string | null;
@@ -12,17 +13,9 @@ interface Exercise {
 
 const client = generateClient<Schema>();
 
-const YOUTUBE_API_KEY = "AIzaSyAKwgma38x1HQzkgWbLs2XpdW6hii2Mktc";
 
-const backupVideos: Record<string, string> = {
-  "Squats": "https://www.youtube.com/embed/aclHkVaku9U",
-  "Push Ups": "https://www.youtube.com/embed/IODxDxX7oi4",
-  "Pull Ups": "https://www.youtube.com/embed/eGo4IYlbE5g",
-  "Deadlifts": "https://www.youtube.com/embed/r4MzxtBKyNE",
-  "Cycling": "https://www.youtube.com/embed/pmB6R67-_CM",
-  "Jump Rope": "https://www.youtube.com/embed/YFhIPQ_xlJo",
-  "Lunges": "https://www.youtube.com/embed/7m7bP2M9p6o",
-};
+const RAPIDAPI_KEY = "1356ab160amsh9b6bfc5a92343aap16935ajsn3ccbef0df5fa";
+const BASE_URL = "https://exercisedb.p.rapidapi.com";
 
 function Workout() {
   const [loading, setLoading] = useState(false);
@@ -50,10 +43,47 @@ function Workout() {
         const userData = onboardingResult.data[0];
         console.log("Loaded Onboarding Data:", userData);
 
-        const exercises = await fetchExercisesForUserPreferences(userData);
-        const exercisesWithVideos = await fetchYouTubeVideos(exercises);
+        const equipment = mapEquipmentToName(userData.equipmentAvailable ?? 'none');
+        const targetMuscles = mapGoalToMuscles(userData.fitnessGoalType ?? 'maintenance');
+        const additionalMuscles = mapFitnessTypeToMuscles(userData.fitnessType ?? 'mixed');
 
-        setAllExercises(exercisesWithVideos);
+        const allMuscles = Array.from(new Set([...targetMuscles, ...additionalMuscles]));
+        const allFetchedExercises: Exercise[] = [];
+
+        for (const muscle of allMuscles) {
+          const url = `${BASE_URL}/exercises/target/${encodeURIComponent(muscle)}`;
+          console.log("Fetching from:", url);
+
+          const response = await fetch(url, {
+            method: 'GET',
+            headers: {
+              'X-RapidAPI-Key': RAPIDAPI_KEY,
+              'X-RapidAPI-Host': "exercisedb.p.rapidapi.com"
+            }
+          });
+
+          const data = await response.json();
+
+          const filtered = data.filter((exercise: any) =>
+            equipment.includes(exercise.equipment.toLowerCase())
+          );
+
+          if (filtered.length === 0) continue;
+
+          const selected = filtered.length > 3 ? filtered.slice(0, 3) : filtered;
+
+          allFetchedExercises.push(
+            ...selected.map((ex: any) => ({
+              id: ex.id,
+              name: ex.name,
+              description: `${ex.name} targets your ${ex.target} using ${ex.equipment}. ${ex.instructions?.[0] ?? 'Perform with control and proper form.'}`,
+              videoUrl: ex.gifUrl || null
+            }))
+          );
+        }
+
+        const shuffled = allFetchedExercises.sort(() => 0.5 - Math.random()).slice(0, 15);
+        setAllExercises(shuffled);
       } catch (err) {
         console.error(err);
         setError("Failed to fetch workout recommendations.");
@@ -65,110 +95,72 @@ function Workout() {
     fetchWorkouts();
   }, []);
 
-  async function fetchExercisesForUserPreferences(userData: Schema["OnboardingData"]["type"]): Promise<Exercise[]> {
-    const categories = mapPreferencesToWgerCategories(userData);
-    const categoryParam = categories.join(',');
-
-    const url = "https://wger.de/api/v2/exercise/?language=2&category=${categoryParam}";
-    console.log("Fetching from: ${url}");
-
-    const response = await fetch(url);
-    const data = await response.json();
-    
-    return data.results.map((exercise: any) => ({
-      id: exercise.id,
-      name: exercise.name,
-      description: exercise.description,
-      videoUrl: null,
-    }));
+  function mapEquipmentToName(equipment: string): string[] {
+    switch (equipment) {
+      case 'none': 
+        return ['body weight'];
+      case 'basic': 
+        return ['dumbbell', 'body weight'];
+      case 'full': 
+        return ['barbell', 'dumbbell', 'body weight'];
+      default: 
+        return ['body weight'];
+    }
   }
 
-  async function fetchYouTubeVideos(exercises: Exercise[]): Promise<Exercise[]> {
-    return Promise.all(
-      exercises.map(async (exercise) => {
-        const cachedVideo = localStorage.getItem("video_${exercise.name}");
-        if (cachedVideo) {
-          console.log("Using cached video for ${exercise.name}");
-          return { ...exercise, videoUrl: JSON.parse(cachedVideo) };
-        }
-
-        let videoUrl = null;
-        const query = encodeURIComponent("${exercise.name} workout tutorial exercise");
-        
-        try {
-          console.log("Fetching YouTube video for: ${exercise.name}");
-          const response = await fetch(
-            "https://www.googleapis.com/youtube/v3/search?part=snippet&q=${query}&key=${YOUTUBE_API_KEY}&maxResults=1&type=video"
-          );
-
-          if (!response.ok) throw new Error("YouTube API request failed: ${response.statusText}");
-
-          const data = await response.json();
-          console.log("YouTube Response for ${exercise.name}:", data);
-
-          const videoId = data.items?.[0]?.id?.videoId;
-          if (videoId) {
-            videoUrl = "https://www.youtube.com/embed/${videoId}";
-            localStorage.setItem(`video_${exercise.name}`, JSON.stringify(videoUrl)); // Save to cache
-          }
-        } catch (error) {
-          console.error("Failed to fetch video for ${exercise.name}, using backup", error);
-        }
-
-        return { ...exercise, videoUrl: videoUrl || backupVideos[exercise.name] || null };
-      })
-    );
+  function mapGoalToMuscles(goal: string): string[] {
+    switch (goal) {
+      case 'weightLoss':
+        return ['cardiovascular system', 'abs', 'quads', 'glutes', 'calves'];
+      case 'muscleGain':
+        return ['biceps', 'triceps', 'pectorals', 'lats', 'quads', 'glutes', 'delts'];
+      case 'endurance':
+        return ['calves', 'quads', 'glutes', 'abs', 'traps'];
+      case 'maintenance':
+        return ['abs', 'glutes', 'quads', 'biceps', 'delts'];
+      default:
+        return ['quads', 'abs', 'glutes'];
+    }
   }
 
-  function mapPreferencesToWgerCategories(userData: Schema["OnboardingData"]["type"]): number[] {
-    const goalCategories = (() => {
-        switch (userData.fitnessGoalType) {
-            case "weightLoss": return [15, 8, 9, 10, 12, 13];
-            case "muscleGain": return [8, 9, 10, 12, 13];
-            case "endurance": return [15];
-            case "maintenance": return [8, 9, 10, 12, 13, 15];
-            default: return [10];
-        }
-    })();
-
-    switch (userData.fitnessType) {
-        case "cardio": return goalCategories.filter(cat => cat === 15);
-        case "strength": return goalCategories.filter(cat => cat !== 15);
-        case "flexibility": return [15];
-        case "mixed": return goalCategories;
-        default: return goalCategories;
+  function mapFitnessTypeToMuscles(fitnessType: string): string[] {
+    switch (fitnessType) {
+      case 'cardio':
+        return ['cardiovascular system'];
+      case 'strength':
+        return ['quads', 'biceps', 'triceps', 'pectorals', 'lats'];
+      case 'flexibility':
+        return ['lower back', 'spine'];
+      case 'mixed':
+        return ['abs', 'quads', 'glutes', 'triceps'];
+      default:
+        return ['abs', 'quads'];
     }
   }
 
   if (loading) return <div>Loading your recommended workout...</div>;
-  if (error) return <div style={{ color: "red" }}>{error}</div>;
-
-  if (!allExercises.length) {
-    return <div>No recommended exercises found. Try updating your quiz info!</div>;
-  }
+  if (error) return <div style={{ color: 'red' }}>{error}</div>;
+  if (!allExercises.length) return <div>No recommended exercises found.</div>;
 
   return (
-    <div style={{ padding: "1rem" }}>
+    <div style={{ padding: '1rem' }}>
       <h2>Your Recommended Workout</h2>
       <p>Based on your quiz answers, here are some exercises you might try:</p>
-
       <ul>
         {allExercises.slice(0, visibleCount).map((ex) => (
           <li key={ex.id} style={{ marginBottom: "20px" }}>
             <strong>{ex.name}</strong>
-            <p dangerouslySetInnerHTML={{ __html: ex.description }} />
-            
-            {/* 🎥 Embed YouTube video or backup */}
+            <p>{ex.description}</p>
             {ex.videoUrl ? (
-              <iframe
+              <img
+                src={ex.videoUrl}
+                alt={ex.name}
                 width="360"
                 height="200"
-                src={ex.videoUrl}
-                title={ex.name}
-                allowFullScreen
-              ></iframe>
+                style={{ objectFit: 'cover', borderRadius: '10px' }}
+              />
             ) : (
-              <p>No tutorial found</p>
+              <p>No visual found</p>
             )}
           </li>
         ))}
@@ -176,15 +168,15 @@ function Workout() {
 
       {visibleCount < allExercises.length && (
         <button
-          onClick={() => setVisibleCount(prev => prev + 5)}
+          onClick={() => setVisibleCount((prev) => prev + 5)}
           style={{
-            marginTop: "1rem",
-            padding: "0.6rem 1.2rem",
-            backgroundColor: "#194121",
-            color: "white",
-            borderRadius: "5px",
-            cursor: "pointer",
-            border: "none",
+            marginTop: '1rem',
+            padding: '0.6rem 1.2rem',
+            backgroundColor: '#194121',
+            color: 'white',
+            borderRadius: '5px',
+            cursor: 'pointer',
+            border: 'none'
           }}
         >
           Show More
