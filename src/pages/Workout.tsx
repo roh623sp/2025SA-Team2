@@ -1,8 +1,9 @@
-
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { getCurrentUser } from '@aws-amplify/auth';
 import { generateClient } from 'aws-amplify/data';
 import type { Schema } from '../../amplify/data/resource';
+import { useAuthenticator } from '@aws-amplify/ui-react';
 
 interface Exercise {
   id: string;
@@ -13,15 +14,17 @@ interface Exercise {
 
 const client = generateClient<Schema>();
 
-
-const RAPIDAPI_KEY = "1356ab160amsh9b6bfc5a92343aap16935ajsn3ccbef0df5fa";
+const RAPIDAPI_KEY = "de965478e0msh8d5cf01cb20234fp188ea4jsnee1e13130f32";
 const BASE_URL = "https://exercisedb.p.rapidapi.com";
 
 function Workout() {
+  const { user } = useAuthenticator((context) => [context.user]); // Get authenticated user
+  const userId = user?.username || 'guest'; // Use username or fallback to 'guest'
   const [loading, setLoading] = useState(false);
   const [allExercises, setAllExercises] = useState<Exercise[]>([]);
-  const [visibleCount, setVisibleCount] = useState(5);
   const [error, setError] = useState<string | null>(null);
+  const [popupMessage, setPopupMessage] = useState<string | null>(null); // State for popup message
+  const navigate = useNavigate();
 
   useEffect(() => {
     async function fetchWorkouts() {
@@ -138,6 +141,27 @@ function Workout() {
     }
   }
 
+  const handleAddToRoutine = (exercise: Exercise) => {
+    // Retrieve existing workouts for the user from localStorage
+    const existingWorkouts = JSON.parse(localStorage.getItem(`selectedWorkouts_${userId}`) || '[]');
+
+    // Check if the workout is already in the routine
+    if (existingWorkouts.some((existing: Exercise) => existing.id === exercise.id)) {
+      setPopupMessage("Already in your routine");
+      setTimeout(() => setPopupMessage(null), 2000);
+      return;
+    }
+
+    // Add the workout to the routine
+    const updatedWorkouts = [...existingWorkouts, exercise];
+
+    // Save the updated list to localStorage with the user's ID
+    localStorage.setItem(`selectedWorkouts_${userId}`, JSON.stringify(updatedWorkouts));
+
+    // Remove the workout from the list in Workout
+    setAllExercises((prev) => prev.filter((ex) => ex.id !== exercise.id));
+  };
+
   if (loading) return <div>Loading your recommended workout...</div>;
   if (error) return <div style={{ color: 'red' }}>{error}</div>;
   if (!allExercises.length) return <div>No recommended exercises found.</div>;
@@ -146,8 +170,25 @@ function Workout() {
     <div style={{ padding: '1rem' }}>
       <h2>Your Recommended Workout</h2>
       <p>Based on your quiz answers, here are some exercises you might try:</p>
+      {popupMessage && (
+        <div
+          style={{
+            position: 'fixed',
+            top: '20px',
+            left: '50%',
+            transform: 'translateX(-50%)',
+            backgroundColor: '#FF4D4D',
+            color: 'white',
+            padding: '10px 20px',
+            borderRadius: '5px',
+            zIndex: 1000,
+          }}
+        >
+          {popupMessage}
+        </div>
+      )}
       <ul>
-        {allExercises.slice(0, visibleCount).map((ex) => (
+        {allExercises.map((ex) => (
           <li key={ex.id} style={{ marginBottom: "20px" }}>
             <strong>{ex.name}</strong>
             <p>{ex.description}</p>
@@ -162,26 +203,25 @@ function Workout() {
             ) : (
               <p>No visual found</p>
             )}
+            <br />
+            <button
+              onClick={() => handleAddToRoutine(ex)}
+              style={{
+                marginTop: '10px',
+                padding: '0.5rem 1rem',
+                backgroundColor: '#007BFF',
+                color: 'white',
+                border: 'none',
+                borderRadius: '5px',
+                cursor: 'pointer',
+                
+              }} 
+            >
+              Add Workout to Routine
+            </button>
           </li>
         ))}
       </ul>
-
-      {visibleCount < allExercises.length && (
-        <button
-          onClick={() => setVisibleCount((prev) => prev + 5)}
-          style={{
-            marginTop: '1rem',
-            padding: '0.6rem 1.2rem',
-            backgroundColor: '#194121',
-            color: 'white',
-            borderRadius: '5px',
-            cursor: 'pointer',
-            border: 'none'
-          }}
-        >
-          Show More
-        </button>
-      )}
     </div>
   );
 }
