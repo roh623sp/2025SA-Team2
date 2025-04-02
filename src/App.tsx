@@ -41,7 +41,7 @@ function App() {
         style={{
           position: "fixed",
           bottom: "20px",
-          right: "20px",
+          left: "20px",
           backgroundColor: "black",
           color: "white",
           border: "none",
